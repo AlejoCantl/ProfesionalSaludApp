@@ -1,88 +1,146 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.mycompany.admisioncitasprofesionalsalud;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
-import java.io.*;
-import java.net.*;
 import javax.swing.JOptionPane;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 
 public class ApiService {
     private static final String BASE_URL = "http://localhost:8000";
+    private static final HttpClient client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+
+    // ========================================
+    // MÉTODOS PÚBLICOS (iguales a antes)
+    // ========================================
 
     public static String login(String usuario, String contrasena) throws Exception {
-        String url = BASE_URL + "/Usuario/login";
         JSONObject body = new JSONObject();
         body.put("nombre_usuario", usuario);
         body.put("contrasena", contrasena);
-        String response = post(url, body.toString(), null);
+        String response = post("/Usuario/login", body.toString(), null);
         return new JSONObject(response).getString("access_token");
     }
 
     public static int getUsuarioId(String token) throws Exception {
         JSONObject perfil = getPerfil(token);
-        return perfil.getInt("id"); // Ajustar si el campo es diferente
+        return perfil.getInt("id");
     }
 
     public static JSONObject getPerfil(String token) throws Exception {
-        return new JSONObject(get(BASE_URL + "/Usuario/perfil", token));
+        String response = get("/Usuario/perfil", token);
+        return new JSONObject(response);
     }
 
     public static JSONArray getCitasPendientes(String token) throws Exception {
-        JSONObject res = new JSONObject(get(BASE_URL + "/Profesional_salud/citas", token));
+        JSONObject res = new JSONObject(get("/Profesional_salud/citas", token));
         return res.getJSONArray("citas");
     }
 
     public static JSONObject getDetalleCita(String token, int citaId) throws Exception {
-        JSONObject res = new JSONObject(get(BASE_URL + "/Profesional_salud/citas/" + citaId + "/detalle", token));
+        JSONObject res = new JSONObject(get("/Profesional_salud/citas/" + citaId + "/detalle", token));
         return res.getJSONObject("detalle_cita");
     }
 
     public static void aprobarCita(String token, int citaId, boolean aprobado, String razon) {
         try {
-            String url = BASE_URL + "/Profesional_salud/citas/aprobar";
             JSONObject body = new JSONObject();
             body.put("cita_id", citaId);
             body.put("aprobado", aprobado);
-            if (!aprobado && razon != null && !razon.isEmpty()) {
-                body.put("razon", razon);
+            if (!aprobado && razon != null && !razon.trim().isEmpty()) {
+                body.put("razon", razon.trim());
             }
-            post(url, body.toString(), token);
+            // Usa PATCH (ahora funciona!)
+            patch("/Profesional_salud/citas/aprobar", body.toString(), token);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Error al procesar cita: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    private static String get(String url, String token) throws Exception {
-        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-        conn.setRequestMethod("GET");
-        conn.setRequestProperty("Authorization", "Bearer " + token);
-        return readResponse(conn);
+    // ========================================
+    // MÉTODOS HTTP GENÉRICOS (HttpClient)
+    // ========================================
+
+    private static String get(String path, String token) throws Exception {
+        return sendRequest("GET", path, null, token);
     }
 
-    private static String post(String url, String json, String token) throws Exception {
-        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json");
-        if (token != null) conn.setRequestProperty("Authorization", "Bearer " + token);
-        conn.setDoOutput(true);
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(json.getBytes());
+    private static String post(String path, String json, String token) throws Exception {
+        return sendRequest("POST", path, json, token);
+    }
+
+    private static String patch(String path, String json, String token) throws Exception {
+        return sendRequest("PATCH", path, json, token);
+    }
+
+    private static String put(String path, String json, String token) throws Exception {
+        return sendRequest("PUT", path, json, token);
+    }
+
+    private static String delete(String path, String token) throws Exception {
+        return sendRequest("DELETE", path, null, token);
+    }
+
+    // ========================================
+    // MÉTODO GENÉRICO (reutilizable)
+    // ========================================
+
+    private static String sendRequest(String method, String path, String jsonBody, String token) throws Exception {
+        String url = BASE_URL + path;
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(15));
+
+        // Headers
+        builder.header("Content-Type", "application/json");
+        if (token != null) {
+            builder.header("Authorization", "Bearer " + token);
         }
-        return readResponse(conn);
+
+        // Método y cuerpo
+        if (jsonBody != null && !jsonBody.trim().isEmpty()) {
+            builder.method(method, HttpRequest.BodyPublishers.ofString(jsonBody));
+        } else {
+            builder.method(method, HttpRequest.BodyPublishers.noBody());
+        }
+
+        HttpRequest request = builder.build();
+
+        // Enviar y manejar respuesta
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() >= 400) {
+            throw new Exception("HTTP " + response.statusCode() + ": " + response.body());
+        }
+
+        return response.body();
     }
 
-    private static String readResponse(HttpURLConnection conn) throws Exception {
-        BufferedReader br = new BufferedReader(new InputStreamReader(
-            conn.getResponseCode() >= 400 ? conn.getErrorStream() : conn.getInputStream()
-        ));
-        StringBuilder response = new StringBuilder();
-        String line;
-        while ((line = br.readLine()) != null) response.append(line);
-        br.close();
-        if (conn.getResponseCode() >= 400) throw new Exception("HTTP " + conn.getResponseCode() + ": " + response);
-        return response.toString();
+    // ========================================
+    // MÉTODO ASÍNCRONO (opcional)
+    // ========================================
+
+    public static CompletableFuture<String> getAsync(String path, String token) {
+        String url = BASE_URL + path;
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Authorization", "Bearer " + token)
+                .GET()
+                .build();
+
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(resp -> {
+                    if (resp.statusCode() >= 400) {
+                        throw new RuntimeException("HTTP " + resp.statusCode() + ": " + resp.body());
+                    }
+                    return resp.body();
+                });
     }
 }
