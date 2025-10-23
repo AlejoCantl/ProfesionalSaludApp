@@ -10,24 +10,26 @@ import java.awt.*;
 public class CitasFrame extends JInternalFrame {
     private JTable tabla;
     private DefaultTableModel modelo;
-    private final ProfesionalSaludApp parent; // Mantener referencia para agregar el frame
+    private final ProfesionalSaludApp parent; 
+    private final String token; // Hacemos el token una variable de instancia
 
     public CitasFrame(ProfesionalSaludApp parent, String token) {
         super("Citas Pendientes", true, true, true, true);
         this.parent = parent;
+        this.token = token; // Asignamos el token
         
-        initUI(parent, token);
+        initUI(); // initUI ya no necesita el token como argumento
         
         // -----------------------------------------------------------------
         // Ajuste de tamaño final y centrado
-        setPreferredSize(new Dimension(850, 500)); // Ligeramente más ancho
+        setPreferredSize(new Dimension(850, 500)); 
         pack();
         setMinimumSize(getSize());
-        parent.agregarFrame(this); // Agregar y centrar el frame
+        parent.agregarFrame(this); 
         // -----------------------------------------------------------------
     }
 
-    private void initUI(ProfesionalSaludApp parent, String token) {
+    private void initUI() {
         // Usar BorderLayout para el JInternalFrame
         setLayout(new BorderLayout()); 
 
@@ -43,40 +45,29 @@ public class CitasFrame extends JInternalFrame {
         
         // --- 1. MEJORAS VISUALES Y CENTRADO DE LA TABLA ---
         
-        // 1.1 Renderer para CENTRAR TODO EL TEXTO
+        // ... (Renderer, estilo de tabla, etc. - Mantenemos el código original) ...
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
         
-        // Aplicar el renderizador centrado a TODAS las columnas
         for (int i = 0; i < tabla.getColumnCount(); i++) {
             tabla.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
         }
         
-        // 1.2 Visibilidad de Separadores
-        // Mostrar líneas de cuadrícula para filas y columnas
         tabla.setShowGrid(true); 
-        // Color de las líneas de la cuadrícula
         tabla.setGridColor(Color.LIGHT_GRAY); 
-        
-        // Estilo de la cabecera (Header)
         tabla.getTableHeader().setFont(tabla.getTableHeader().getFont().deriveFont(Font.BOLD, 12f));
-        tabla.getTableHeader().setBackground(new Color(220, 220, 220)); // Gris claro para el fondo
-        tabla.getTableHeader().setForeground(new Color(50, 50, 50)); // Gris oscuro para el texto
-        tabla.getTableHeader().setBorder(BorderFactory.createLineBorder(Color.GRAY)); // Borde más visible
+        tabla.getTableHeader().setBackground(new Color(220, 220, 220)); 
+        tabla.getTableHeader().setForeground(new Color(50, 50, 50)); 
+        tabla.getTableHeader().setBorder(BorderFactory.createLineBorder(Color.GRAY)); 
 
-        // Altura de las filas y de la cabecera
         tabla.setRowHeight(25);
         tabla.getTableHeader().setPreferredSize(new Dimension(0, 30)); 
 
-        // Selección de fila completa y solo una
         tabla.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         
-        // Ajuste de ancho (ejemplo: ID más pequeño)
         tabla.getColumnModel().getColumn(0).setPreferredWidth(40); 
         
-        // Añadir la tabla al centro
         JScrollPane scrollPane = new JScrollPane(tabla);
-        // Añadir un margen (borde vacío) alrededor de la tabla
         scrollPane.setBorder(BorderFactory.createCompoundBorder(
             new EmptyBorder(10, 10, 0, 10), 
             scrollPane.getBorder()
@@ -86,7 +77,11 @@ public class CitasFrame extends JInternalFrame {
         
         // --- 2. Panel de Botones ---
         
-        JButton btnDetalle = new JButton("Ver Detalles de la cita");
+        JButton btnDetalle = new JButton("Ver Detalles");
+        JButton btnAprobar = new JButton("✅ Aprobar"); // Nuevo botón
+        JButton btnRechazar = new JButton("❌ Rechazar"); // Nuevo botón
+
+        // Lógica para Ver Detalles
         btnDetalle.addActionListener(e -> {
             int row = tabla.getSelectedRow();
             if (row >= 0) {
@@ -97,16 +92,65 @@ public class CitasFrame extends JInternalFrame {
             }
         });
         
-        JPanel botonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        botonPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); 
+        // Lógica para Aprobar
+        btnAprobar.addActionListener(e -> aprobarCitaDesdeTabla(true));
+
+        // Lógica para Rechazar
+        btnRechazar.addActionListener(e -> aprobarCitaDesdeTabla(false));
+
+        // Agrupación de botones
+        JPanel botonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10)); // Espacio horizontal de 15px
+        botonPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10)); 
         botonPanel.add(btnDetalle);
+        botonPanel.add(btnAprobar);
+        botonPanel.add(btnRechazar);
         add(botonPanel, BorderLayout.SOUTH);
         
         // Cargar datos
-        cargarCitas(token);
+        cargarCitas(); // Ya no necesita el token como argumento
     }
 
-    public void cargarCitas(String token) {
+    // Método que maneja la lógica de aprobación/rechazo desde la tabla
+    private void aprobarCitaDesdeTabla(boolean aprobado) {
+        int row = tabla.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Selecciona una cita de la tabla.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int citaId = (int) modelo.getValueAt(row, 0);
+        String razon = "";
+
+        if (!aprobado) {
+            // Si es rechazo, pedimos la razón (opcional)
+            razon = JOptionPane.showInputDialog(this, 
+                "Ingresa la razón del rechazo (opcional):", 
+                "Rechazar Cita #" + citaId, 
+                JOptionPane.QUESTION_MESSAGE
+            );
+            // Si el usuario cancela (razon es null), detenemos la operación.
+            if (razon == null) return;
+        }
+
+        try {
+            ApiService.aprobarCita(token, citaId, aprobado, razon);
+            
+            JOptionPane.showMessageDialog(this,
+                aprobado ? "Cita #" + citaId + " aprobada con éxito." : "Cita #" + citaId + " rechazada con éxito.",
+                "Resultado", JOptionPane.INFORMATION_MESSAGE);
+            
+            cargarCitas(); // Recargar la tabla para reflejar el cambio
+            
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                "Error al procesar la cita:\n" + ex.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+
+    // El método cargarCitas ahora no necesita el token como argumento, ya lo tiene como instancia
+    public void cargarCitas() {
         try {
             JSONArray citas = ApiService.getCitasPendientes(token);
             modelo.setRowCount(0);
@@ -123,8 +167,6 @@ public class CitasFrame extends JInternalFrame {
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al cargar citas: " + e.getMessage(), "Error de Carga", JOptionPane.ERROR_MESSAGE);
-            // Si es necesario para depuración, puedes descomentar:
-            // e.printStackTrace(); 
         }
     }
 }

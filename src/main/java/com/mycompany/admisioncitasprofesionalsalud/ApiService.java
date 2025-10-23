@@ -63,6 +63,31 @@ public class ApiService {
             e.printStackTrace();
         }
     }
+    
+    // Decodificar rol
+
+    public static int getRolId(String token) throws Exception {
+        // 1. Separar el token en sus 3 partes (header.payload.signature)
+        String[] parts = token.split("\\.");
+        if (parts.length < 2) {
+            throw new Exception("Token JWT inválido.");
+        }
+
+        // 2. Decodificar el payload (base64url)
+        String payloadBase64 = parts[1];
+        // Rellena el padding si es necesario
+        String payload = new String(java.util.Base64.getUrlDecoder().decode(payloadBase64.getBytes()), "UTF-8");
+
+        // 3. Parsear el JSON
+        JSONObject json = new JSONObject(payload);
+
+        // 4. Extraer el rol_id
+        if (!json.has("rol_id")) {
+            throw new Exception("El token no contiene el ID de rol.");
+        }
+
+        return json.getInt("rol_id");
+    }
 
     // ========================================
     // MÉTODOS HTTP GENÉRICOS (HttpClient)

@@ -1,7 +1,7 @@
 package com.mycompany.admisioncitasprofesionalsalud;
 
-import javax.swing.*;
 import java.awt.*;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
 public class LoginFrame extends JInternalFrame {
@@ -24,7 +24,6 @@ public class LoginFrame extends JInternalFrame {
 
     private void initUI() {
         // --- Dimensiones ajustadas ---
-        // Reducimos la altura a 28px para que los inputs no sean exagerados
         Dimension inputButtonSize = new Dimension(150, 28); 
 
         // --- 1. Crear el Panel del Formulario (Contenido) con GridBagLayout ---
@@ -73,12 +72,9 @@ public class LoginFrame extends JInternalFrame {
         // Aplicar altura ajustada y bordes redondeados al botón
         btnLogin.setPreferredSize(inputButtonSize); 
         
-        // **MODIFICACIÓN CLAVE DE REDONDEO DEL BOTÓN:** // A veces, solo 'JButton.roundRect' no es suficiente. 
-        // Usamos la propiedad genérica de componente y un valor de arco explícito.
         btnLogin.putClientProperty("JComponent.roundRect", true);
-        btnLogin.putClientProperty("FlatLaf.buttonArc", 20); // Opcional: Aumenta la redondez si es necesario
+        btnLogin.putClientProperty("FlatLaf.buttonArc", 20); 
         
-
         // --- CENTRADO DEL BOTÓN ---
         gbc.gridx = 0; // Iniciar en la columna 0
         gbc.gridy = 2; // Fila 2
@@ -103,14 +99,33 @@ public class LoginFrame extends JInternalFrame {
     private void realizarLogin() {
         String usuario = txtUsuario.getText();
         String contrasena = new String(txtContrasena.getPassword());
+        
         try {
+            // 1. Intentar iniciar sesión (obtener token)
             String token = ApiService.login(usuario, contrasena);
+            
+            // 2. Obtener el ID del rol a partir del token (asumiendo que ApiService tiene este nuevo método)
+            int rolId = ApiService.getRolId(token);
+            
+            // 3. Validar el rol
+            final int ROL_PERMITIDO = 3;
+            if (rolId != ROL_PERMITIDO) {
+                // Si el rol no es 3, lanzamos una excepción de seguridad/autorización
+                throw new Exception("Rol no autorizado. Solo se permite el rol Profesional de salud.");
+            }
+            
+            // 4. Si el rol es correcto, obtener el ID de usuario y proceder
             int id = ApiService.getUsuarioId(token);
+            
             callback.onLogin(token, id);
             JOptionPane.showMessageDialog(this, "Login exitoso", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             dispose();
+            
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error de credenciales o conexión: " + ex.getMessage(), "Error de Login", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, 
+                "Error de credenciales o autorización: " + ex.getMessage(), 
+                "Error de Login", 
+                JOptionPane.ERROR_MESSAGE);
         }
     }
 

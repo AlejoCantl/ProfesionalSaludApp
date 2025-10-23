@@ -44,8 +44,7 @@ public class DetalleCitaFrame extends JInternalFrame {
             
             clinicoPanel.add(Box.createVerticalStrut(5)); // Espacio antes del subtítulo
             
-            // --- MODIFICACIÓN CLAVE: Subtítulo para Enfermedades ---
-            // El título "Enfermedades" debe estar alineado a la izquierda.
+            // Subtítulo para Enfermedades
             JLabel lblEnfermedades = new JLabel("<html><b>Enfermedades:</b></html>");
             lblEnfermedades.setAlignmentX(Component.LEFT_ALIGNMENT); // Asegurar alineación
             clinicoPanel.add(lblEnfermedades); 
@@ -70,7 +69,7 @@ public class DetalleCitaFrame extends JInternalFrame {
             scrollEnfermedades.setAlignmentX(Component.LEFT_ALIGNMENT);
             
             clinicoPanel.add(scrollEnfermedades);
-            // --- FIN MODIFICACIÓN CLAVE ---
+            
 
 
             // 3. DATOS DE LA CITA
@@ -85,39 +84,12 @@ public class DetalleCitaFrame extends JInternalFrame {
             mainPanel.add(clinicoPanel);
             mainPanel.add(Box.createVerticalStrut(10)); // Separador
             mainPanel.add(citaPanel);
-            mainPanel.add(Box.createVerticalStrut(15)); // Separador antes de la acción
+            mainPanel.add(Box.createVerticalStrut(15)); // Separador final
 
-            // 4. SECCIÓN DE APROBACIÓN/RECHAZO (RAZÓN Y BOTONES)
-            JTextArea txtRazon = new JTextArea("Razón del rechazo (opcional)", 3, 30);
-            txtRazon.setLineWrap(true);
-            txtRazon.setWrapStyleWord(true);
-            txtRazon.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder("Razón de Rechazo"),
-                new EmptyBorder(5, 5, 5, 5)
-            ));
-
-            JButton btnAprobar = new JButton("✅ Aprobar Cita");
-            JButton btnRechazar = new JButton("❌ Rechazar Cita");
-
-            btnAprobar.addActionListener(e -> aprobar(true, null));
-            btnRechazar.addActionListener(e -> aprobar(false, txtRazon.getText()));
-
-            // Se cambia FlowLayout.RIGHT por FlowLayout.CENTER o se deja FlowLayout.LEFT 
-            // si se quiere alineación estricta, pero FlowLayout.RIGHT es común para botones de acción.
-            // Para mantener la consistencia con un flujo de trabajo típico (acción a la derecha):
-            JPanel botones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-            botones.add(btnAprobar);
-            botones.add(btnRechazar);
-            botones.setAlignmentX(Component.LEFT_ALIGNMENT); // Asegurar que el panel de botones se alinee a la izquierda
-
-            // Añadir componentes de acción
-            mainPanel.add(new JScrollPane(txtRazon));
-            mainPanel.add(Box.createVerticalStrut(5));
-            mainPanel.add(botones);
-
+            // ***** SE ELIMINA LA SECCIÓN 4 DE APROBACIÓN/RECHAZO *****
 
             // -------------------------------------------------
-            add(mainPanel);
+            add(new JScrollPane(mainPanel)); // El mainPanel se envuelve en un ScrollPane por si el contenido es grande
             pack();
             setMinimumSize(getSize());
             parent.agregarFrame(this);
@@ -141,30 +113,8 @@ public class DetalleCitaFrame extends JInternalFrame {
     }
 
 
-    private void aprobar(boolean aprobado, String razon) {
-        try {
-            if (!aprobado && (razon == null || razon.trim().isEmpty()
-                    || razon.equals("Razón del rechazo (opcional)"))) {
-                razon = "";
-            }
-            ApiService.aprobarCita(token, citaId, aprobado, razon);
-            JOptionPane.showMessageDialog(this,
-                    aprobado ? "Cita aprobada."
-                            : "Cita rechazada.",
-                    "Resultado", JOptionPane.INFORMATION_MESSAGE);
-            dispose();
-            // Opcional: recargar la tabla de citas
-            for(JInternalFrame frame : parent.getDesktopPane().getAllFrames() ){
-               if(frame instanceof CitasFrame){
-               ((CitasFrame) frame).cargarCitas(token);
-               }
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al procesar la cita:\n" + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
+    // ***** SE ELIMINA EL MÉTODO 'aprobar()' *****
+
 
     private JLabel label(String html) {
         // ASEGURAMOS ALINEACIÓN A LA IZQUIERDA PARA TODOS LOS LABELS
