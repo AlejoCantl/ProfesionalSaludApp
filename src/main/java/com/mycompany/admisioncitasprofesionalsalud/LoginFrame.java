@@ -2,7 +2,7 @@ package com.mycompany.admisioncitasprofesionalsalud;
 
 import javax.swing.*;
 import java.awt.*;
-import javax.swing.border.EmptyBorder; // Importar para añadir espacio alrededor
+import javax.swing.border.EmptyBorder;
 
 public class LoginFrame extends JInternalFrame {
     private JTextField txtUsuario;
@@ -15,68 +15,91 @@ public class LoginFrame extends JInternalFrame {
     }
 
     public LoginFrame(ProfesionalSaludApp parent) {
-        // Título, redimensionable, cerrable, maximizable, iconifiable
-        super("Iniciar Sesión", false, true, false, false); 
+        super("Iniciar Sesión", false, true, false, false);
         this.parent = parent;
-        
-        // No establecer setSize/setLayout aquí. Usaremos pack() después de initUI
-        setResizable(true); 
-        
-        // Llamamos a un initUI modificado
+        setResizable(false);
         initUI();
-        
-        // 1. Empacar los componentes para que la ventana tome el tamaño mínimo necesario
-        pack(); 
+        pack();
     }
 
     private void initUI() {
-        // --- 1. Crear el Panel del Formulario (Contenido) ---
-        // Usaremos GridLayout o SpringLayout para el formulario en sí.
-        // GridLayout es simple y está bien, pero NO debe ir en el JInternalFrame principal.
-        JPanel formPanel = new JPanel(new GridLayout(3, 2, 10, 10));
-        
-        // Agregar un borde vacío para darle un poco de "aire"
-        formPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        // --- Dimensiones ajustadas ---
+        // Reducimos la altura a 28px para que los inputs no sean exagerados
+        Dimension inputButtonSize = new Dimension(150, 28); 
 
-        // Fila 1: Usuario
-        formPanel.add(new JLabel("Usuario:"));
-        txtUsuario = new JTextField(15); // Darle un tamaño preferido (opcional)
-        formPanel.add(txtUsuario);
+        // --- 1. Crear el Panel del Formulario (Contenido) con GridBagLayout ---
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 5, 8, 5); // Espacio (padding)
+        gbc.anchor = GridBagConstraints.WEST; // Etiquetas alineadas a la izquierda
         
+        // Inicializar Inputs
+        txtUsuario = new JTextField(15);
+        txtContrasena = new JPasswordField(15);
+        
+        // Aplicar altura ajustada y bordes redondeados (FlatLaf)
+        txtUsuario.setPreferredSize(inputButtonSize);
+        txtContrasena.setPreferredSize(inputButtonSize);
+        txtUsuario.putClientProperty("JComponent.roundRect", true);
+        txtContrasena.putClientProperty("JComponent.roundRect", true);
+        
+        
+        // Fila 1: Usuario
+        gbc.gridx = 0; // Columna 0
+        gbc.gridy = 0; // Fila 0
+        gbc.weightx = 0; 
+        formPanel.add(new JLabel("Usuario:"), gbc);
+
+        gbc.gridx = 1; // Columna 1
+        gbc.fill = GridBagConstraints.HORIZONTAL; 
+        formPanel.add(txtUsuario, gbc);
+
         // Fila 2: Contraseña
-        formPanel.add(new JLabel("Contraseña:"));
-        txtContrasena = new JPasswordField(15); // Darle un tamaño preferido (opcional)
-        formPanel.add(txtContrasena);
+        gbc.gridx = 0; // Columna 0
+        gbc.gridy = 1; // Fila 1
+        gbc.fill = GridBagConstraints.NONE; 
+        formPanel.add(new JLabel("Contraseña:"), gbc);
+
+        gbc.gridx = 1; // Columna 1
+        gbc.fill = GridBagConstraints.HORIZONTAL; 
+        formPanel.add(txtContrasena, gbc);
 
         // Fila 3: Botón
         JButton btnLogin = new JButton("Iniciar Sesión");
         btnLogin.addActionListener(e -> realizarLogin());
+
+        // Aplicar altura ajustada y bordes redondeados al botón
+        btnLogin.setPreferredSize(inputButtonSize); 
         
-        // Usamos un JPanel para centrar el botón en su celda (columna 2)
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonPanel.add(btnLogin);
+        // **MODIFICACIÓN CLAVE DE REDONDEO DEL BOTÓN:** // A veces, solo 'JButton.roundRect' no es suficiente. 
+        // Usamos la propiedad genérica de componente y un valor de arco explícito.
+        btnLogin.putClientProperty("JComponent.roundRect", true);
+        btnLogin.putClientProperty("FlatLaf.buttonArc", 20); // Opcional: Aumenta la redondez si es necesario
+        
 
-        formPanel.add(new JLabel()); // Celda vacía (Columna 1, Fila 3)
-        formPanel.add(buttonPanel);  // El botón (Columna 2, Fila 3)
-
-        // --- 2. Crear el Panel Contenedor Central ---
-        // Usamos GridBagLayout en este wrapper para centrar el formPanel
+        // --- CENTRADO DEL BOTÓN ---
+        gbc.gridx = 0; // Iniciar en la columna 0
+        gbc.gridy = 2; // Fila 2
+        gbc.gridwidth = 2; // Ocupar ambas columnas (0 y 1)
+        gbc.anchor = GridBagConstraints.CENTER; // Anclar al centro de su espacio
+        gbc.fill = GridBagConstraints.NONE; 
+        
+        // Agregar espacio antes del botón
+        gbc.insets = new Insets(20, 5, 5, 5); 
+        
+        formPanel.add(btnLogin, gbc);
+        
+        // --- 2. Crear el Panel Contenedor Central para centrar el formulario ---
         JPanel centerWrapper = new JPanel(new GridBagLayout());
-        
-        // Añadir el panel del formulario al wrapper. 
-        // Las restricciones por defecto lo centran.
         centerWrapper.add(formPanel, new GridBagConstraints());
 
         // --- 3. Añadir el Wrapper al JInternalFrame ---
-        // Establecer el Layout del JInternalFrame a BorderLayout
         setLayout(new BorderLayout());
-        
-        // Añadir el panel wrapper al centro. Este panel se estira, 
-        // pero el GridBagLayout mantiene el formPanel centrado.
         add(centerWrapper, BorderLayout.CENTER);
     }
 
-    // ... (El resto de los métodos realizarLogin y setCallback permanecen iguales) ...
     private void realizarLogin() {
         String usuario = txtUsuario.getText();
         String contrasena = new String(txtContrasena.getPassword());
@@ -84,10 +107,10 @@ public class LoginFrame extends JInternalFrame {
             String token = ApiService.login(usuario, contrasena);
             int id = ApiService.getUsuarioId(token);
             callback.onLogin(token, id);
-            JOptionPane.showMessageDialog(this, "Login exitoso");
+            JOptionPane.showMessageDialog(this, "Login exitoso", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             dispose();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
+            JOptionPane.showMessageDialog(this, "Error de credenciales o conexión: " + ex.getMessage(), "Error de Login", JOptionPane.ERROR_MESSAGE);
         }
     }
 
