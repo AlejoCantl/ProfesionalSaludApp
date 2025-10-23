@@ -3,7 +3,6 @@ package com.mycompany.admisioncitasprofesionalsalud;
 import org.json.JSONObject;
 import javax.swing.*;
 import java.awt.*;
-import javax.swing.border.TitledBorder;
 import javax.swing.border.EmptyBorder;
 
 public class DetalleCitaFrame extends JInternalFrame {
